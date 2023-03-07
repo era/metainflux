@@ -123,7 +123,7 @@ async fn sync_tag_values(
 
     for tag in tag_names {
         let result = client
-            .json_query(ReadQuery::new(format!("show tag values from {measurement} with key = {tag}")))
+            .json_query(ReadQuery::new(format!("show tag values from {measurement} with key = '{tag}'")))
             .await
             .unwrap();
 
