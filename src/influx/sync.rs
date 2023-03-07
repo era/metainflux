@@ -117,8 +117,32 @@ async fn sync_tag_values(
     client: &Client,
     measurement: &str,
     tag_names: &Vec<String>,
-) -> Result<HashMap<String, String>> {
-    todo!()
+) -> Result<HashMap<String, Vec<String>>> {
+
+    let mut final_result = HashMap::new();
+
+    for tag in tag_names {
+        let result = client
+            .json_query(ReadQuery::new(format!("show tag values from {measurement} with key = {tag}")))
+            .await
+            .unwrap();
+
+        let mut tag_vector = vec![];
+
+        let tag_values = match get_values_from_query(&result) {
+            None => continue,
+            Some(r) => r,
+        };
+
+        for tag_value in tag_values {
+            let tag_value = tag_value.as_array().unwrap().get(0).unwrap().to_string();
+            tag_vector.push(tag_value);
+        }
+
+        final_result.insert(tag.to_string(), tag_vector);
+    }
+
+    Ok(final_result)
 }
 
 async fn sync_fields(client: &Client, measurement: &str) -> Result<()> {
