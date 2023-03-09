@@ -14,6 +14,6 @@ async fn main() {
         Duration::from_secs(60),
     );
     sync.sync().await.unwrap();
-    let result = sync.db.sql("select * from treasures_tags").await.unwrap();
+    let result = sync.db.sql("select * from tags").await.unwrap();
     println!("{:?}", result);
 }

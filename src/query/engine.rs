@@ -1,7 +1,13 @@
 use anyhow::{Context, Result};
 use datafusion::arrow::record_batch::RecordBatch;
+use datafusion::datasource::listing::ListingTable;
+use datafusion::datasource::listing::ListingTableConfig;
+use datafusion::datasource::listing::ListingOptions;
+use datafusion::datasource::file_format::parquet::ParquetFormat;
+use datafusion::datasource::listing::ListingTableUrl;
 use datafusion::prelude::*;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 pub struct DB {
     path: PathBuf,
@@ -24,15 +30,15 @@ impl DB {
         df.collect().await.context("error while executing sql")
     }
 
-    pub async fn register(&self, measurement: String) -> Result<()> {
-        self.register_tags(&measurement).await?;
-        self.register_fields(&measurement).await?;
+    pub async fn register(&self) -> Result<()> {
+        self.register_tags().await?;
+        self.register_fields().await?;
         Ok(())
     }
-    async fn register_tags(&self, measurement: &str) -> Result<()> {
-        let measurement = measurement.replace("\"", "");
-        let table_name = format!("{measurement}_tags");
-        let file_path = format!("{measurement}_tags.parquet");
+
+    /// example usage
+    /// register_files("tags", "/tmp/tags/*.parquet")
+    async fn register_files(&self, table_name: &str, file_path: &str) -> Result<()> {
         self.ctx
             .register_parquet(
                 &table_name,
@@ -43,16 +49,40 @@ impl DB {
             .context("could not register tag table")
     }
 
-    async fn register_fields(&self, measurement: &str) -> Result<()> {
-        let measurement = measurement.replace("\"", "");
-        let table_name = format!("{measurement}_fields");
-        let file_path = format!("{measurement}_fields.parquet");
-        self.ctx
-            .register_parquet(
-                &table_name,
-                self.path.join(file_path).to_str().unwrap(),
-                ParquetReadOptions::default(),
-            )
+    async fn register_listener(&self, table_name: &str, table_path: &str) -> Result<()> {
+        let table_path = ListingTableUrl::parse(table_path).context("could not parse table url")?;
+
+        // Create default parquet options
+        let file_format = ParquetFormat::new();
+        let listing_options =
+            ListingOptions::new(Arc::new(file_format)).with_file_extension(".parquet");
+
+        // Resolve the schema
+        let resolved_schema = listing_options
+            .infer_schema(&self.ctx.state(), &table_path)
+            .await?;
+
+        let config = ListingTableConfig::new(table_path)
+            .with_listing_options(listing_options)
+            .with_schema(resolved_schema);
+
+        // Create a a new TableProvider
+        let provider = Arc::new(ListingTable::try_new(config)?);
+
+        // or registered as a named table:
+        self.ctx.register_table(table_name, provider);
+
+        Ok(())
+    }
+
+    async fn register_tags(&self) -> Result<()> {
+        self.register_listener("tags", self.path.join("tags").to_str().unwrap())
+            .await
+            .context("could not register tag table")
+    }
+
+    async fn register_fields(&self) -> Result<()> {
+        self.register_listener("fields", self.path.join("fields").to_str().unwrap())
             .await
             .context("could not register fields table")
     }
@@ -60,6 +90,5 @@ impl DB {
     //TODO register edit_distance function
     // https://docs.rs/datafusion/latest/datafusion/execution/context/struct.SessionContext.html#method.register_udf
 }
-
 
 //TODO tests
