@@ -1,3 +1,6 @@
+#![feature(async_closure)]
+
+use std::thread;
 use std::time::Duration;
 
 mod influx;
@@ -13,7 +16,9 @@ async fn main() {
         path.into(),
         Duration::from_secs(60),
     );
-    sync.sync().await.unwrap();
-    let result = sync.db.sql("select * from tags").await.unwrap();
+    sync.setup_sync().unwrap();
+    println!("going to sleep to wait first sync");
+    thread::sleep(Duration::from_secs(10));
+    let result = sync.query("select * from tags").await.unwrap();
     println!("{:?}", result);
 }

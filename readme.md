@@ -26,7 +26,7 @@ Right now we have two tables:
 
 
 # TODO
-- [] Sync with InfluxDB every X period
-- [] Implement command line arguments using `Clap`
-- [] Research how to update a "table" on DataFusion
-- [] Implement Flight Server
+- [X] Sync with InfluxDB every X period (needs proper test)
+- [ ] Implement command line arguments using `Clap`
+- [ ] Research how to update a "table" on DataFusion
+- [ ] Implement Flight Server
