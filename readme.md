@@ -23,3 +23,10 @@ Right now we have two tables:
 
 - `fields` with columns: `measurement`, `name`
 - `tags` with columns: `measurement`, `name`, `value`
+
+
+# TODO
+- [] Sync with InfluxDB every X period
+- [] Implement command line arguments using `Clap`
+- [] Research how to update a "table" on DataFusion
+- [] Implement Flight Server
